@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/JohnSundell/Files.git",
         "state": {
           "branch": null,
-          "revision": "6171f9e9d8619678da22355560f3dbed6368058d",
-          "version": "2.0.1"
+          "revision": "435965437ff7f149b9682aeb6553b5aa14b00402",
+          "version": "2.2.0"
         }
       },
       {
@@ -69,8 +69,8 @@
         "repositoryURL": "https://github.com/danger/danger-swift.git",
         "state": {
           "branch": null,
-          "revision": "d8c089e20dc38022afad29b741d59f60da0262d6",
-          "version": "0.3.3"
+          "revision": "ba06d58b6a1202fc1173174c8ffc4c8537af9990",
+          "version": "0.3.5"
         }
       }
     ]

@@ -8,10 +8,10 @@ public struct SwiftLint {
     /// This is the main entry point for linting Swift in PRs using Danger-Swift.
     /// Call this function anywhere from within your Dangerfile.swift.
     @discardableResult
-    public static func lint(inline: Bool = false, directory: String? = nil, configFile: String? = nil) -> [Violation] {
+    public static func lint(inline: Bool = false, directory: String? = nil, configFile: String? = nil, pathToSwiftLint: String? = nil) -> [Violation] {
         // First, for debugging purposes, print the working directory.
         print("Working directory: \(shellExecutor.execute("pwd"))")
-        return self.lint(danger: danger, shellExecutor: shellExecutor, inline: inline, directory: directory, configFile: configFile)
+        return self.lint(danger: danger, shellExecutor: shellExecutor, inline: inline, directory: directory, configFile: configFile, pathToSwiftLint: pathToSwiftLint)
     }
 }
 
@@ -23,6 +23,7 @@ internal extension SwiftLint {
         inline: Bool = false,
         directory: String? = nil,
         configFile: String? = nil,
+        pathToSwiftLint: String? = nil,
         markdownAction: (String) -> Void = markdown,
         failAction: (String) -> Void = fail,
         failInlineAction: (String, String, Int) -> Void = fail,
@@ -39,7 +40,7 @@ internal extension SwiftLint {
             if let configFile = configFile {
                 arguments.append("--config \"\(configFile)\"")
             }
-            let outputJSON = shellExecutor.execute("swiftlint", arguments: arguments)
+            let outputJSON = shellExecutor.execute(pathToSwiftLint ?? "swiftlint", arguments: arguments)
             do {
                 var violations = try decoder.decode([Violation].self, from: outputJSON.data(using: String.Encoding.utf8)!)
                 // Workaround for a bug that SwiftLint returns absolute path
