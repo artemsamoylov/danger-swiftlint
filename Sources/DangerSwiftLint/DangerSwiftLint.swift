@@ -1,5 +1,6 @@
 import Danger
 import Foundation
+import Files
 
 public struct SwiftLint {
     internal static let danger = Danger()
@@ -8,10 +9,10 @@ public struct SwiftLint {
     /// This is the main entry point for linting Swift in PRs using Danger-Swift.
     /// Call this function anywhere from within your Dangerfile.swift.
     @discardableResult
-    public static func lint(inline: Bool = false, directory: String? = nil, configFile: String? = nil, pathToSwiftLint: String? = nil) -> [Violation] {
+    public static func lint(inline: Bool = false, directory: String? = nil, configFile: String? = nil, pathToSwiftLint: String? = nil, checkAllFiles: Bool = false) -> [Violation] {
         // First, for debugging purposes, print the working directory.
         print("Working directory: \(shellExecutor.execute("pwd"))")
-        return self.lint(danger: danger, shellExecutor: shellExecutor, inline: inline, directory: directory, configFile: configFile, pathToSwiftLint: pathToSwiftLint)
+        return self.lint(danger: danger, shellExecutor: shellExecutor, inline: inline, directory: directory, configFile: configFile, pathToSwiftLint: pathToSwiftLint, checkAllFiles: checkAllFiles)
     }
 }
 
@@ -24,18 +25,35 @@ internal extension SwiftLint {
         directory: String? = nil,
         configFile: String? = nil,
         pathToSwiftLint: String? = nil,
+        checkAllFiles: Bool = false,
         markdownAction: (String) -> Void = markdown,
         failAction: (String) -> Void = fail,
         failInlineAction: (String, String, Int) -> Void = fail,
         warnInlineAction: (String, String, Int) -> Void = warn) -> [Violation] {
         // Gathers modified+created files, invokes SwiftLint on each, and posts collected errors+warnings to Danger.
 
-        var files = danger.git.createdFiles + danger.git.modifiedFiles
-        print("Count files in begining: \(files.count)")
-        if let directory = directory {
-            files = files.filter { $0.hasPrefix(directory) }
+        var files: [String] = []
+        if let directory = directory, checkAllFiles {
+            do {
+                try Folder(path: directory).makeSubfolderSequence(recursive: true).forEach { folder in
+                    for file in folder.files {
+                        files.append(file.path)
+                    }
+                }
+            } catch let error {
+                print("Error adding all Files: \(error)")
+            }
+
+            print("All Files: \(files.count)")
+        } else {
+            var files = danger.git.createdFiles + danger.git.modifiedFiles
+            print("Count files in begining: \(files.count)")
+            if let directory = directory {
+                files = files.filter { $0.hasPrefix(directory) }
+            }
+            print("Count files after hasPrefix(directory): \(files.count)")
         }
-        print("Count files after hasPrefix(directory): \(files.count)")
+
         let decoder = JSONDecoder()
         let violations = files.filter { $0.hasSuffix(".swift") }.flatMap { file -> [Violation] in
             var arguments = ["lint", "--quiet", "--path \"\(file)\"", "--reporter json"]
