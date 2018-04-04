@@ -12,7 +12,7 @@ public struct SwiftLint {
     public static func lint(inline: Bool = false, directory: String? = nil, configFile: String? = nil, pathToSwiftLint: String? = nil, checkAllFiles: Bool = false) -> [Violation] {
         // First, for debugging purposes, print the working directory.
         print("Working directory: \(shellExecutor.execute("pwd"))")
-        return self.lint(danger: danger, shellExecutor: shellExecutor, inline: inline, directory: directory, configFile: configFile, pathToSwiftLint: pathToSwiftLint, checkAllFiles: checkAllFiles)
+        return self.lint(danger: danger, shellExecutor: shellExecutor, inline: inline, directory: directory, configFile: configFile, pathToSwiftLint: pathToSwiftLint, checkAllFiles: false)
     }
 }
 
