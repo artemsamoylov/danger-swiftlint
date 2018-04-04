@@ -39,9 +39,7 @@ internal extension SwiftLint {
                 if let configFile = configFile {
                     arguments.append("--config \"\(configFile)\"")
                 }
-                print("Execute swiftlint with: \(arguments)")
                 let outputJSON = shellExecutor.execute(pathToSwiftLint ?? "swiftlint", arguments: arguments)
-                print("Result execute swiftlint: \(outputJSON.description)")
                 do {
                     var violations = try decoder.decode([Violation].self, from: outputJSON.data(using: String.Encoding.utf8)!)
                     // Workaround for a bug that SwiftLint returns absolute path
@@ -79,7 +77,7 @@ internal extension SwiftLint {
                 try Folder(path: directory).makeSubfolderSequence(recursive: true).forEach { folder in
                     for file in folder.files {
                         for changeFile in changedFiles {
-                            if file.path.hasSuffix(changeFile) {
+                            if !file.path.hasSuffix(changeFile) {
                                 allFiles.append(file.path)
                             }
                         }
@@ -91,6 +89,8 @@ internal extension SwiftLint {
             let violations = violationsFromFiles(files: allFiles, shouldBeInline: false)
             allViolations+=violations
         }
+        
+        print("Count all violation: \(allViolations.count)")
 
         if !allViolations.isEmpty {
             var markdownMessage = ""
