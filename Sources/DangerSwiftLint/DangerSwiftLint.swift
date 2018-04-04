@@ -31,16 +31,20 @@ internal extension SwiftLint {
         // Gathers modified+created files, invokes SwiftLint on each, and posts collected errors+warnings to Danger.
 
         var files = danger.git.createdFiles + danger.git.modifiedFiles
+        print("Count files in begining: \(files.count)")
         if let directory = directory {
             files = files.filter { $0.hasPrefix(directory) }
         }
+        print("Count files after hasPrefix(directory): \(files.count)")
         let decoder = JSONDecoder()
         let violations = files.filter { $0.hasSuffix(".swift") }.flatMap { file -> [Violation] in
             var arguments = ["lint", "--quiet", "--path \"\(file)\"", "--reporter json"]
             if let configFile = configFile {
                 arguments.append("--config \"\(configFile)\"")
             }
+            print("Execute swiftlint with: \(arguments)")
             let outputJSON = shellExecutor.execute(pathToSwiftLint ?? "swiftlint", arguments: arguments)
+            print("Result execute swiftlint: \(outputJSON.description)")
             do {
                 var violations = try decoder.decode([Violation].self, from: outputJSON.data(using: String.Encoding.utf8)!)
                 // Workaround for a bug that SwiftLint returns absolute path
