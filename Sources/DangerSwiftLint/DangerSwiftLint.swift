@@ -46,7 +46,7 @@ internal extension SwiftLint {
 
             print("All Files: \(files.count)")
         } else {
-            var files = danger.git.createdFiles + danger.git.modifiedFiles
+            files = danger.git.createdFiles + danger.git.modifiedFiles
             print("Count files in begining: \(files.count)")
             if let directory = directory {
                 files = files.filter { $0.hasPrefix(directory) }
