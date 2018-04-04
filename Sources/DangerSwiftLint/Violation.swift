@@ -1,9 +1,9 @@
+enum Severity: String, Codable {
+    case warning = "Warning"
+    case error = "Error"
+}
+    
 public struct Violation: Codable {
-    enum Severity: String, Codable {
-        case warning = "Warning"
-        case error = "Error"
-    }
-
     let ruleID: String
     let reason: String
     let line: Int
@@ -33,11 +33,22 @@ public struct Violation: Codable {
 
     public func toMarkdown() -> String {
         let formattedFile = file.split(separator: "/").last! + ":\(line)"
-        return "\(severity.rawValue) | \(formattedFile) | \(reason) |"
+        return "| \(severity.emojiSeverity) | \(formattedFile) | \(reason) |"
     }
 
     mutating func update(file: String) {
         self.file = file
+    }
+}
+
+extension Severity {
+    var emojiSeverity: String {
+        switch self {
+        case .warning:
+            return "⚠️"
+        case .error:
+            return "❗️"
+        }
     }
 }
 

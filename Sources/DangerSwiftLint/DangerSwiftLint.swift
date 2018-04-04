@@ -115,7 +115,13 @@ internal extension SwiftLint {
                 }
             }
             if !markdownMessage.isEmpty {
-                markdownAction(markdownMessage)
+                let finalMessage = """
+                ### SwiftLint found issues
+
+                |:----:|:---:|:---:|\n
+                \(markdownMessage)
+                """
+                markdownAction(finalMessage)
             }
         }
 
