@@ -70,6 +70,7 @@ internal extension SwiftLint {
         }
         
         allViolations = violationsFromFiles(files: changedFiles, shouldBeInline: inline)
+        print("Count all change violation: \(allViolations.count)")
 
         if let directory = directory, checkAllFiles {
             var allFiles: [String] = []

@@ -28,7 +28,7 @@ public struct Violation: Codable {
         file = try values.decode(String.self, forKey: .file)
         severity = try values.decode(Severity.self, forKey: .severity)
         type = try values.decode(String.self, forKey: .type)
-        inline = try values.decode(Bool.self, forKey: .inline)
+        inline = false
     }
 
     public func toMarkdown() -> String {
