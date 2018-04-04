@@ -12,7 +12,7 @@ public struct SwiftLint {
     public static func lint(inline: Bool = false, directory: String? = nil, configFile: String? = nil, pathToSwiftLint: String? = nil, checkAllFiles: Bool = false) -> [Violation] {
         // First, for debugging purposes, print the working directory.
         print("Working directory: \(shellExecutor.execute("pwd"))")
-        return self.lint(danger: danger, shellExecutor: shellExecutor, inline: inline, directory: directory, configFile: configFile, pathToSwiftLint: pathToSwiftLint, checkAllFiles: false)
+        return self.lint(danger: danger, shellExecutor: shellExecutor, inline: inline, directory: directory, configFile: configFile, pathToSwiftLint: pathToSwiftLint, checkAllFiles: checkAllFiles)
     }
 }
 
@@ -27,81 +27,92 @@ internal extension SwiftLint {
         pathToSwiftLint: String? = nil,
         checkAllFiles: Bool = false,
         markdownAction: (String) -> Void = markdown,
-        failAction: (String) -> Void = fail,
+        failAction: @escaping (String) -> Void = fail,
         failInlineAction: (String, String, Int) -> Void = fail,
         warnInlineAction: (String, String, Int) -> Void = warn) -> [Violation] {
         // Gathers modified+created files, invokes SwiftLint on each, and posts collected errors+warnings to Danger.
+        
+        func violationsFromFiles(files: [String], shouldBeInline: Bool) -> [Violation] {
+            let decoder = JSONDecoder()
+            let violations = files.filter { $0.hasSuffix(".swift") }.flatMap { file -> [Violation] in
+                var arguments = ["lint", "--quiet", "--path \"\(file)\"", "--reporter json"]
+                if let configFile = configFile {
+                    arguments.append("--config \"\(configFile)\"")
+                }
+                print("Execute swiftlint with: \(arguments)")
+                let outputJSON = shellExecutor.execute(pathToSwiftLint ?? "swiftlint", arguments: arguments)
+                print("Result execute swiftlint: \(outputJSON.description)")
+                do {
+                    var violations = try decoder.decode([Violation].self, from: outputJSON.data(using: String.Encoding.utf8)!)
+                    // Workaround for a bug that SwiftLint returns absolute path
+                    violations = violations.map { violation in
+                        var newViolation = violation
+                        newViolation.inline = shouldBeInline
+                        newViolation.update(file: file)
+                        
+                        return newViolation
+                    }
+                    
+                    return violations
+                } catch let error {
+                    failAction("Error deserializing SwiftLint JSON response (\(outputJSON)): \(error)")
+                    return []
+                }
+            }
+            return violations
+        }
+        
+        var allViolations: [Violation] = []
+        
+        var changedFiles = danger.git.createdFiles + danger.git.modifiedFiles
+        print("Changed Count files in begining: \(changedFiles.count)")
+        if let directory = directory {
+            changedFiles = changedFiles.filter { $0.hasPrefix(directory) }
+            print("Count files after hasPrefix(directory): \(changedFiles.count)")
+        }
+        
+        allViolations = violationsFromFiles(files: changedFiles, shouldBeInline: inline)
 
-        var files: [String] = []
         if let directory = directory, checkAllFiles {
+            var allFiles: [String] = []
             do {
                 try Folder(path: directory).makeSubfolderSequence(recursive: true).forEach { folder in
                     for file in folder.files {
-                        files.append(file.path)
+                        for changeFile in changedFiles {
+                            if file.path.hasSuffix(changeFile) {
+                                allFiles.append(file.path)
+                            }
+                        }
                     }
                 }
             } catch let error {
                 print("Error adding all Files: \(error)")
             }
-
-            print("All Files: \(files.count)")
-        } else {
-            files = danger.git.createdFiles + danger.git.modifiedFiles
-            print("Count files in begining: \(files.count)")
-            if let directory = directory {
-                files = files.filter { $0.hasPrefix(directory) }
-            }
-            print("Count files after hasPrefix(directory): \(files.count)")
+            let violations = violationsFromFiles(files: allFiles, shouldBeInline: false)
+            allViolations+=violations
         }
 
-        let decoder = JSONDecoder()
-        let violations = files.filter { $0.hasSuffix(".swift") }.flatMap { file -> [Violation] in
-            var arguments = ["lint", "--quiet", "--path \"\(file)\"", "--reporter json"]
-            if let configFile = configFile {
-                arguments.append("--config \"\(configFile)\"")
-            }
-            print("Execute swiftlint with: \(arguments)")
-            let outputJSON = shellExecutor.execute(pathToSwiftLint ?? "swiftlint", arguments: arguments)
-            print("Result execute swiftlint: \(outputJSON.description)")
-            do {
-                var violations = try decoder.decode([Violation].self, from: outputJSON.data(using: String.Encoding.utf8)!)
-                // Workaround for a bug that SwiftLint returns absolute path
-                violations = violations.map { violation in
-                    var newViolation = violation
-                    newViolation.update(file: file)
-
-                    return newViolation
-                }
-
-                return violations
-            } catch let error {
-                failAction("Error deserializing SwiftLint JSON response (\(outputJSON)): \(error)")
-                return []
-            }
-        }
-
-        if !violations.isEmpty {
-            if inline {
-                violations.forEach { violation in
+        if !allViolations.isEmpty {
+            var markdownMessage = ""
+            allViolations.forEach { violation in
+                if violation.inline {
                     switch violation.severity {
                     case .error:
                         failInlineAction(violation.reason, violation.file, violation.line)
                     case .warning:
                         warnInlineAction(violation.reason, violation.file, violation.line)
                     }
+                    print("Inline action \(violation.file)")
+                } else {
+                    print("markdown action \(violation.file)")
+                    markdownMessage += "\(violation.toMarkdown() )\n"
                 }
-            } else {
-                var markdownMessage = """
-                ### SwiftLint found issues
-
-                | Severity | File | Reason |
-                | -------- | ---- | ------ |\n
-                """
-                markdownMessage += violations.map { $0.toMarkdown() }.joined(separator: "\n")
+            }
+            if !markdownMessage.isEmpty {
                 markdownAction(markdownMessage)
             }
         }
 
-        return violations
+        return allViolations
     }
 }

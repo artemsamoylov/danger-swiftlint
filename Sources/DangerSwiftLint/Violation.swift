@@ -10,12 +10,13 @@ public struct Violation: Codable {
     let character: Int?
     let severity: Severity
     let type: String
+    var inline: Bool
     
     private(set) var file: String
 
     enum CodingKeys: String, CodingKey {
         case ruleID = "rule_id"
-        case reason, line, character, file, severity, type
+        case reason, line, character, file, severity, type, inline
     }
 
     public init(from decoder: Decoder) throws {
@@ -27,6 +28,7 @@ public struct Violation: Codable {
         file = try values.decode(String.self, forKey: .file)
         severity = try values.decode(Severity.self, forKey: .severity)
         type = try values.decode(String.self, forKey: .type)
+        inline = try values.decode(Bool.self, forKey: .inline)
     }
 
     public func toMarkdown() -> String {
