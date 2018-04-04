@@ -77,10 +77,15 @@ internal extension SwiftLint {
             do {
                 try Folder(path: directory).makeSubfolderSequence(recursive: true).forEach { folder in
                     for file in folder.files {
+                        var alreadyLint = false
                         for changeFile in changedFiles {
-                            if !file.path.hasSuffix(changeFile) {
-                                allFiles.append(file.path)
+                            if file.path.hasSuffix(changeFile) {
+                                alreadyLint = true
+                                break
                             }
+                        }
+                        if !alreadyLint {
+                            allFiles.append(file.path)
                         }
                     }
                 }
