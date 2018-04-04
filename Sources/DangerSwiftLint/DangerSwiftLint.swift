@@ -117,7 +117,7 @@ internal extension SwiftLint {
             if !markdownMessage.isEmpty {
                 let finalMessage = """
                 ### SwiftLint found issues
-
+                || ||
                 |:----:|:---:|:---:|\n
                 \(markdownMessage)
                 """
